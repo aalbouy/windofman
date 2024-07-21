@@ -14,7 +14,7 @@ class KeyboardManager():
         if key == keyboard.Key.alt:
             self.alt_pressed = True
         
-        try :
+        try:
             if key == keyboard.Key.f2:
                 self.windowManager.next() 
             if key == keyboard.Key.f3:

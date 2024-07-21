@@ -1,8 +1,12 @@
-evdev==1.7.1
-ewmh==0.1.6
+hid==1.0.6
+PyWinCtl==0.4
+PyAutoGUI==0.9.54
 pyasn1==0.6.0
 pynput==1.7.7
 PySimpleGUI==4.60.5
 python-xlib==0.33
 rsa==4.9
 six==1.16.0
+Pillow==10.4.0
+opencv-python==4.10.0.84
+blinker==1.8.2

@@ -1,33 +1,36 @@
-from ewmh import EWMH
+import pywinctl as winctl
 
 from confManager import ConfManager
 from tools import get_character_name
+from finder import found_char_turn
 
-class WindowManager():
 
+class WindowManager:
     def __init__(self):
-
-        self.ewmh = EWMH()
+        found_char_turn.connect(self.handle_char_turn)
         self.windows = []
         self.ignored = []
         self.current_window = []
         self.on_top = False
-        self.location = (None,None)
-    
+        self.location = (None, None)
+
         self.get_data()
+
+    def handle_char_turn(self, _, char):
+        if not winctl.getActiveWindow().title.startswith(char):
+            self.active_window_by_ch_name(char)
 
     def get_data(self):
         self.__get_windows()
         self.__get_setting()
 
     def __get_windows(self):
-        windows = []
-        
-        for window in self.ewmh.getClientList():
-            if self.ewmh.getWmName(window) is not None and (b'Dofus 2.' in self.ewmh.getWmName(window) or self.ewmh.getWmName(window) == b'Dofus'):
-                windows.append(window)
+        windows = winctl.getWindowsWithTitle(' - Dofus 2', condition=winctl.Re.CONTAINS)
 
-        self.windows = windows
+        windows_title = []
+        for w in windows:
+            windows_title.append(w.title)
+        self.windows = windows_title
         self.sort_windows()
         self.__set_current_window()
 
@@ -36,20 +39,20 @@ class WindowManager():
         self.on_top = settings["on_top_settings"]
         self.location = settings["location"] if "location" in settings.keys() else (None,None)
 
-    def __set_current_window(self): 
+    def __set_current_window(self):
         self.current_window = self.windows[0] if self.windows else []
 
     def print_windows_name(self):
         for window in self.windows:
-            print(get_character_name(self.ewmh.getWmName(window)))
+            print(get_character_name(window))
 
     def next(self):
-       self.__switch(1)
+        self.__switch(1)
 
     def previous(self):
         self.__switch(0)
 
-    def __switch(self, forward : bool):
+    def __switch(self, forward: bool):
         step = 1 if forward else -1
         index = self.windows.index(self.current_window) + step
 
@@ -60,44 +63,46 @@ class WindowManager():
 
         self.current_window = self.windows[index]
 
-        if self.ignored[index] :
-            try :
+        if self.ignored[index]:
+            try:
                 return self.__switch(forward)
-            except RecursionError :
+            except RecursionError:
                 return
 
         self.__active_current_window()
 
     def __active_current_window(self):
         self.__active_window(self.current_window)
-        
-    def __active_window(self,window):
-        self.ewmh.setActiveWindow(window)
-        self.ewmh.display.flush()
 
-    def active_window_by_ch_name(self,ch_name):
+    @staticmethod
+    def __active_window(window):
+        w = winctl.getWindowsWithTitle(window)[0]
+        while not w.isActive:
+            w.activate()
+
+    def active_window_by_ch_name(self, ch_name):
         for window in self.windows:
-            if f'{ch_name}'.encode() in self.ewmh.getWmName(window):
+            if window.startswith(ch_name):
                 self.__active_window(window)
                 break
 
     def sort_windows(self):
-        try :
-            initiative = ConfManager.get_initiative(self.windows,self.ewmh)
-            self.windows = sorted(self.windows, key=lambda w : initiative[get_character_name(self.ewmh.getWmName(w))]['initiative'],reverse=True)
+        try:
+            initiative = ConfManager.get_initiative(self.windows)
+            self.windows = sorted(self.windows, key=lambda w: initiative[get_character_name(w)]['initiative'], reverse=True)
 
             self.__sort_ignored(initiative)
-            
+
         except Exception:
             pass
 
-    def __sort_ignored(self,initiative):
+    def __sort_ignored(self, initiative):
 
         ignores_sort = []
 
         for window in self.windows:
-            ignores_sort.append(initiative[get_character_name(self.ewmh.getWmName(window))]['ignore'])
-        
+            ignores_sort.append(initiative[get_character_name(window)]['ignore'])
+
         self.ignored = ignores_sort
 
 
